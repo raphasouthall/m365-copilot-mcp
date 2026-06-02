@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "M365 Copilot MCP Bridge",
+  "version": "0.1.0",
+  "description": "Lets a local MCP server drive the signed-in Microsoft 365 Copilot web UI. Loopback bridge only; no external endpoints.",
+  "minimum_chrome_version": "116",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["tabs", "scripting", "storage", "alarms"],
+  "host_permissions": [
+    "https://m365.cloud.microsoft/*",
+    "https://copilot.cloud.microsoft/*",
+    "https://copilot.microsoft.com/*",
+    "https://www.office.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://m365.cloud.microsoft/*",
+        "https://copilot.cloud.microsoft/*",
+        "https://copilot.microsoft.com/*",
+        "https://www.office.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

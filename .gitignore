@@ -1,0 +1,7 @@
+node_modules/
+.env
+.token
+.token.dpapi
+*.log
+server.out
+server.err
