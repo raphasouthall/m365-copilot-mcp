@@ -24,7 +24,18 @@ const cfg = {
   bridgePort: Number(process.env.BRIDGE_PORT || 8765),
   defaultSurface: process.env.DEFAULT_SURFACE || "m365",
   askTimeoutMs: Number(process.env.ASK_TIMEOUT_MS || 120000),
+  // Default word cap appended to each prompt. Grounded answers stream token-by-token, so a long
+  // (~8k-char) reply can't finish within askTimeoutMs and is lost even though it completes in the
+  // tab. Capping length keeps the reply inside the window. Override per-call with max_words
+  // (0 = no cap, for verbatim/echo prompts). 0 here disables the default entirely.
+  defaultMaxWords: Number(process.env.DEFAULT_MAX_WORDS || 400),
 };
+
+// Build the length-cap instruction appended to a prompt. Empty string when capping is disabled.
+function lengthCap(maxWords) {
+  if (!maxWords || maxWords <= 0) return "";
+  return `\n\n[Response limit: answer in plain text, no more than ~${maxWords} words. Lead with the direct answer, use short bullets, and cite only the most relevant sources. Do not exceed this limit.]`;
+}
 
 if (!cfg.authToken || cfg.authToken === "change-me") {
   console.error("[fatal] set MCP_AUTH_TOKEN to a real secret (openssl rand -hex 32)");
@@ -81,7 +92,7 @@ function buildMcpServer() {
     {
       title: "Ask M365 Copilot",
       description:
-        "Send a prompt to the authenticated Microsoft 365 Copilot web UI on the work laptop and return its answer as plain text. Use for questions that benefit from the user's enterprise data (email, Teams, SharePoint, tenant docs) or fresh web grounding that this agent cannot access directly.",
+        "Send a prompt to the authenticated Microsoft 365 Copilot web UI on the work laptop and return its answer as plain text. Use for questions that benefit from the user's enterprise data (email, Teams, SharePoint, tenant docs) or fresh web grounding that this agent cannot access directly. Answers are capped to ~400 words by default so the grounded reply finishes streaming within the timeout; pass max_words to change the cap, or max_words:0 to disable it (e.g. for verbatim/echo prompts).",
       inputSchema: {
         prompt: z.string().min(1).describe("The natural-language question to put to Copilot."),
         surface: z
@@ -92,13 +103,20 @@ function buildMcpServer() {
           .boolean()
           .optional()
           .describe("Start a fresh conversation instead of continuing the current one. Default false."),
+        max_words: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Cap the answer length (words). Long grounded answers can't stream back within the timeout, so a cap (default ~400) keeps them inside it. Pass 0 to disable the cap for verbatim/echo prompts; omit to use the server default."),
       },
     },
-    async ({ prompt, surface, new_chat }) => {
+    async ({ prompt, surface, new_chat, max_words }) => {
+      const cap = lengthCap(max_words === undefined ? cfg.defaultMaxWords : max_words);
       const result = await callExtension(
         "ask",
         {
-          prompt,
+          prompt: prompt + cap,
           surface: surface || cfg.defaultSurface,
           newChat: !!new_chat,
         },
@@ -170,5 +188,5 @@ app.delete("/mcp", (_req, res) => res.status(405).json({ jsonrpc: "2.0", error: 
 app.listen(cfg.port, cfg.bindAddr, () => {
   log(`[mcp] listening on http://${cfg.bindAddr}:${cfg.port}/mcp`);
   log(`[bridge] extension WebSocket on ws://${cfg.bridgeAddr}:${cfg.bridgePort}`);
-  log(`[cfg] default surface=${cfg.defaultSurface} askTimeout=${cfg.askTimeoutMs}ms`);
+  log(`[cfg] default surface=${cfg.defaultSurface} askTimeout=${cfg.askTimeoutMs}ms maxWords=${cfg.defaultMaxWords || "off"}`);
 });
