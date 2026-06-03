@@ -81,7 +81,6 @@ async function ask(req) {
     cmd: "ask",
     surface: req.surface,
     prompt: req.prompt,
-    webGrounding: req.webGrounding,
     newChat: req.newChat,
   });
 }

@@ -67,15 +67,15 @@ claude mcp add --transport http m365-copilot http://<BIND_ADDR>:7800/mcp \
 
 - **`copilot_surfaces`** — report which Copilot surfaces are open + authenticated, and whether the
   enterprise **Work** grounding toggle is present. Run this first to confirm entitlement.
-- **`ask_copilot { prompt, surface?, web_grounding?, new_chat? }`** — ask a question, get text back.
+- **`ask_copilot { prompt, surface?, new_chat? }`** — ask a question, get text back.
 
 Surfaces:
 
-| key  | URL                        | grounding |
-|------|----------------------------|-----------|
-| work | `m365.cloud.microsoft/chat`| enterprise (needs Copilot entitlement) |
-| m365 | `copilot.cloud.microsoft`  | M365 Copilot Chat |
-| web  | `copilot.microsoft.com`    | consumer / web only |
+| key  | URL                        | grounding | status |
+|------|----------------------------|-----------|--------|
+| work | `m365.cloud.microsoft/chat`| enterprise (needs Copilot entitlement) | working (answers ~70s; work grounding is slow) |
+| m365 | `copilot.cloud.microsoft`  | M365 Copilot Chat | redirects onto `m365.cloud.microsoft` — effectively an alias of `work` on this tenant |
+| web  | `copilot.microsoft.com`    | consumer / web only | not working — tab lands on an unscriptable URL ("extensions gallery cannot be scripted") |
 
 ## Always-on (Windows)
 

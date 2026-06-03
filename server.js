@@ -88,23 +88,18 @@ function buildMcpServer() {
           .enum(["work", "m365", "web"])
           .optional()
           .describe("Which Copilot surface to use. work=enterprise grounding (m365.cloud.microsoft), m365=Copilot Chat (copilot.cloud.microsoft), web=consumer web grounding. Defaults to server config."),
-        web_grounding: z
-          .boolean()
-          .optional()
-          .describe("If false, ask Copilot to answer from work data only (single-turn toggle). Default true."),
         new_chat: z
           .boolean()
           .optional()
           .describe("Start a fresh conversation instead of continuing the current one. Default false."),
       },
     },
-    async ({ prompt, surface, web_grounding, new_chat }) => {
+    async ({ prompt, surface, new_chat }) => {
       const result = await callExtension(
         "ask",
         {
           prompt,
           surface: surface || cfg.defaultSurface,
-          webGrounding: web_grounding !== false,
           newChat: !!new_chat,
         },
         cfg.askTimeoutMs

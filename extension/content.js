@@ -111,12 +111,28 @@
     el.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Enter", code: "Enter", keyCode: 13 }));
   }
 
+  // Click the "new chat" control and wait for the thread to actually reset, then for a usable
+  // composer to reappear. Bounded so it can never hang the surrounding ask: if no button matches
+  // we return immediately and the ask continues in the current conversation (degraded, not stuck).
   async function startNewChat() {
-    const btn = [...document.querySelectorAll("button")].find((b) => {
-      const t = (b.getAttribute("aria-label") || b.title || b.textContent || "").toLowerCase();
-      return /new chat|new conversation|new topic/.test(t) && isVisible(b);
-    });
-    if (btn) { btn.click(); await sleep(1200); }
+    const findBtn = () =>
+      [...document.querySelectorAll('button, a[role="button"], [role="button"]')].find((b) => {
+        const t = (b.getAttribute("aria-label") || b.title || b.textContent || "").toLowerCase();
+        return /new chat|new conversation|new topic|start new/.test(t) && isVisible(b);
+      });
+    const btn = findBtn();
+    if (!btn) return; // no control found — stay in the current chat rather than block
+    const before = messageNodes().length;
+    btn.click();
+    // SPA navigations re-render asynchronously; wait (bounded) for the thread to clear and the
+    // composer to rehydrate before the caller types into it.
+    const start = Date.now();
+    while (Date.now() - start < 8000) {
+      await sleep(300);
+      const composer = findComposer();
+      const count = messageNodes().length;
+      if (composer && isVisible(composer) && (count === 0 || count < before)) return;
+    }
   }
 
   function collectCitations(node) {
