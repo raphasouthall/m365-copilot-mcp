@@ -28,5 +28,13 @@ if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContin
   Write-Host "Added firewall rule '$ruleName' on Tailscale adapter"
 }
 
+# Idempotent: if the MCP port is already serving, another instance is up — don't double-launch.
+# Lets a periodic Scheduled-Task re-fire act as a self-heal (relaunch only when actually down).
+$existing = Get-NetTCPConnection -LocalPort $env:MCP_PORT -State Listen -ErrorAction SilentlyContinue
+if ($existing) {
+  Write-Host "MCP server already listening on port $($env:MCP_PORT) (PID $(($existing | Select-Object -First 1).OwningProcess)); nothing to do."
+  return
+}
+
 Write-Host "Starting MCP server on http://$($env:MCP_BIND_ADDR):$($env:MCP_PORT)/mcp"
 node server.js
